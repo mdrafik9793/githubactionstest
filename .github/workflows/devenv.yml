@@ -1,0 +1,57 @@
+name: 'Creating Network and Infrastructure in dev environment'
+
+on:
+  push:
+    branches:
+    - main
+    paths:
+      - .github/workflows/devenv.yml
+      - environments/dev/**
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    environment: test
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    # AWS configure
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@master
+      with:
+        role-to-assume: arn:aws:iam::835836133568:role/na
+        aws-region: us-east-1
+          
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.14
+
+    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./environments/dev
+
+    # Generates an execution plan for Terraform
+    - name: Terraform Plan
+      run: terraform plan
+      working-directory: ./environments/dev
+
+      # On push to main, build or change infrastructure according to Terraform configuration files
+      # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
+      working-directory: ./environments/dev
+      
+    #- name: Terraform Destroy
+    #  run: terraform destroy -auto-approve
+    #  working-directory: ./environments/dev  
